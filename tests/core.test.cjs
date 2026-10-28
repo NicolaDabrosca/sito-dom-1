@@ -1,0 +1,18 @@
+const test=require('node:test');
+const assert=require('node:assert/strict');
+const vm=require('node:vm');
+const fs=require('node:fs');
+const sitePath=fs.existsSync(__dirname+'/../dist/core.js')?__dirname+'/../dist/':__dirname+'/../';
+const context={window:{},Intl,Date,console,Set,Error};
+vm.createContext(context);
+vm.runInContext(fs.readFileSync(sitePath+'config.js','utf8'),context);
+vm.runInContext(fs.readFileSync(sitePath+'core.js','utf8'),context);
+const C=context.window.HorrorCore,c=context.window.EVENT_CONFIG;
+test('Evento: 31 ottobre 2026 21:21 a Roma equivale a 20:21 UTC',()=>{assert.equal(C.eventTimestamp(c),Date.parse('2026-10-31T20:21:00Z'));});
+test('Il countdown raggiunge zero e non diventa negativo',()=>{const t=C.eventTimestamp(c);const before=C.remaining(t,t-((2*86400+3*3600+4*60+5)*1000));assert.equal(before.days,2);assert.equal(before.hours,3);assert.equal(before.minutes,4);assert.equal(before.seconds,5);assert.equal(before.started,false);for(const now of [t,t+60000]){const after=C.remaining(t,now);assert.equal(after.days+after.hours+after.minutes+after.seconds,0);assert.equal(after.started,true);}});
+test('Le buste cambiano a mezzanotte italiana, indipendentemente dal fuso del dispositivo',()=>{assert.equal(C.dateKey(new Date('2026-10-28T22:59:59Z')),'2026-10-28');assert.equal(C.dateKey(new Date('2026-10-28T23:00:00Z')),'2026-10-29');});
+test('Roma: gestione automatica di ora legale e solare',()=>{assert.equal(C.eventTimestamp({...c,eventDate:'2026-10-24'}),Date.parse('2026-10-24T19:21:00Z'));assert.equal(C.eventTimestamp({...c,eventDate:'2026-10-25'}),Date.parse('2026-10-25T20:21:00Z'));});
+test('Date inesistenti, ore inesistenti e fusi errati vengono respinti',()=>{for(const patch of [{eventDate:'2026-02-31'},{eventTime:'25:00'},{timeZone:'Non/Esiste'},{eventDate:'2026-03-29',eventTime:'02:30'}])assert.throws(()=>C.validate({...c,...patch}));});
+test('Configurazione: buste duplicate e trasmissioni incomplete vengono respinte',()=>{assert.equal(C.validate(c),c);assert.throws(()=>C.validate({...c,dailyClues:[c.dailyClues[0],c.dailyClues[0]]}));assert.throws(()=>C.validate({...c,transmissions:[]}));});
+test('La frequenza giornaliera è deterministica, entro il range e varia nei quattro giorni',()=>{const f=c.dailyClues.map(x=>C.frequency(x.date));for(const value of f)assert.ok(value>=88&&value<=108);assert.equal(new Set(f).size,4);assert.equal(C.frequency('2026-10-28'),C.frequency('2026-10-28'));});
+test('I testi del biglietto vengono escapati prima di entrare nel file SVG',()=>{assert.equal(C.escape('<img onerror="x"> &'), '&lt;img onerror=&quot;x&quot;&gt; &amp;');});
