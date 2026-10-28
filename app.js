@@ -3,10 +3,14 @@
 const Core=window.HorrorCore,$=id=>document.getElementById(id);
 let config;
 try{config=Core.config(window.EVENT_CONFIG);}catch(error){$('hero-title').textContent='La casa ha perso il copione.';$('intro').textContent=error.message;return;}
+// Compatibilità con la prima versione: il simbolo SVG e il pulsante
+// condividevano l'id candle. Rinomina anche lo sprite delle vecchie pagine.
+const candleSymbol=document.querySelector('symbol#candle');
+if(candleSymbol)candleSymbol.id='candle-icon';
 const progressKey='domenik:progress:'+config.edition;
-const blank=()=>({secrets:[],readClues:[],visits:[],alias:'',bestMemory:null,bestHold:0});
+const blank=()=>({secrets:[],readClues:[],visits:[],alias:'',bestMemory:null,bestHold:0,radioScareDays:[]});
 const raw=Core.read(progressKey,{}),state={...blank(),...(raw&&typeof raw==='object'?raw:{})};
-for(const k of ['secrets','readClues','visits'])if(!Array.isArray(state[k]))state[k]=[];
+for(const k of ['secrets','readClues','visits','radioScareDays'])if(!Array.isArray(state[k]))state[k]=[];
 if(typeof state.alias!=='string')state.alias='';
 let storageWarned=false,toastTimer,day='',target=Core.eventTimestamp(config);
 const secretDefs=[
@@ -19,10 +23,12 @@ const secretDefs=[
  {id:'word',name:'La parola proibita',hint:'Il finale del video ti dà la parola: INCUBO. Scrivila sulla tastiera o tocca qui per pronunciarla.',body:'INCUBO. Adesso che l’hai nominato, l’invito è ufficiale.'},
  {id:'candle',name:'Meglio al buio',hint:'Una candela accesa in fondo alla pagina. Cosa potrebbe andare storto?',body:'Hai spento l’ultima luce. Diciamo che era per creare atmosfera.'}
 ];
-state.secrets=state.secrets.filter(id=>secretDefs.some(s=>s.id===id));
+state.secrets=[...new Set(state.secrets.filter(id=>secretDefs.some(s=>s.id===id)))];
+const FINAL_FILM_TITLE='La casa';
+function allSolved(){return secretDefs.every(secret=>state.secrets.includes(secret.id));}
 function toast(message){clearTimeout(toastTimer);$('toast').textContent=message;$('toast').classList.add('show');toastTimer=setTimeout(()=>$('toast').classList.remove('show'),4200);}
 function save(){if(!Core.write(progressKey,state)&&!storageWarned){storageWarned=true;toast('Il browser non consente il salvataggio: le scoperte dureranno questa visita.');}}
-function icon(name){const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');svg.setAttribute('class','icon');svg.setAttribute('aria-hidden','true');const use=document.createElementNS(svg.namespaceURI,'use');use.setAttribute('href','#'+name);svg.append(use);return svg;}
+function icon(name){const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');svg.setAttribute('class','icon');svg.setAttribute('aria-hidden','true');const use=document.createElementNS(svg.namespaceURI,'use');use.setAttribute('href','#'+(name==='candle'?'candle-icon':name));svg.append(use);return svg;}
 function showModal(title,body,note='',label='UN MESSAGGIO DALLA CASA'){
  const host=$('modal-content');host.replaceChildren();
  const eyebrow=document.createElement('div');eyebrow.className='eyebrow';eyebrow.textContent=label;
@@ -35,7 +41,7 @@ $('modal-close').onclick=()=>$('modal').close();
 $('modal').addEventListener('click',e=>{if(e.target===$('modal')){const r=$('modal').getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)$('modal').close();}});
 function unlock(id){
  if(state.secrets.includes(id))return false;
- state.secrets.push(id);save();renderSecrets();soundNote(196,.28);toast('Segreto ritrovato: '+secretDefs.find(s=>s.id===id).name+' · '+state.secrets.length+'/8');return true;
+ state.secrets.push(id);save();renderSecrets();renderEnvelopes();soundNote(196,.28);toast('Segreto ritrovato: '+secretDefs.find(s=>s.id===id).name+' · '+state.secrets.length+'/8'+(allSolved()?' · L’ultima busta ti aspetta.':''));return true;
 }
 function renderSecrets(){
  $('secret-total').textContent=state.secrets.length;$('nav-secret-count').textContent=state.secrets.length+'/8';
@@ -49,10 +55,11 @@ function renderSecrets(){
 }
 function readableDate(date,options={day:'numeric',month:'long'}){return new Intl.DateTimeFormat('it-IT',{...options,timeZone:'UTC'}).format(new Date(date+'T12:00:00Z'));}
 function applyConfig(){
+ const clueLead=document.querySelector('.clue-section .section-heading>p');if(clueLead)clueLead.textContent='Tre indizi, un giorno alla volta. L’ultima busta aspetta chi risolve tutti gli enigmi.';
  const lines=config.title.split('\n');$('hero-title').replaceChildren();const a=document.createElement('span'),b=document.createElement('em');a.textContent=lines[0];b.textContent=lines.slice(1).join(' ');$('hero-title').append(a,b);
  $('intro').textContent=config.intro;$('extra').textContent=config.extra;
  const date=readableDate(config.eventDate).toUpperCase();$('event-date').textContent=date;$('event-time').textContent='ORE '+config.eventTime;$('event-location').textContent=config.location.toUpperCase();
- $('program-time').textContent=config.eventTime;$('program-location').textContent=config.location;$('film-title').textContent=config.filmTitle||'Il titolo resta nell’ombra.';
+ $('program-time').textContent=config.eventTime;$('program-location').textContent=config.location;$('film-title').textContent='Il titolo si nasconde nell’ultima busta.';
  $('closing-meta').textContent=`${date} / ORE ${config.eventTime} / ${config.location.toUpperCase()}`;
  const marquee=document.querySelector('.marquee>div');marquee.replaceChildren();
  for(const text of [date,'ORE '+config.eventTime,config.location.toUpperCase(),'IL PEGGIO DEVE ANCORA VENIRE',date,'ORE '+config.eventTime,config.location.toUpperCase()]){marquee.append(document.createTextNode(text));const star=document.createElement('span');star.textContent='✳';marquee.append(star);}
@@ -64,20 +71,27 @@ function renderEnvelopes(){
  const clues=[...config.dailyClues].sort((a,b)=>a.date.localeCompare(b.date));
  host.style.gridTemplateColumns='';
  clues.forEach((clue,index)=>{
-  const locked=day<clue.date,read=state.readClues.includes(clue.date),b=document.createElement('button');
-  b.className='envelope'+(locked?' locked':'')+(read?' read':'');b.setAttribute('aria-label',(locked?'Busta sigillata: si apre il ':'Apri la busta del ')+readableDate(clue.date));
-  const date=document.createElement('span');date.className='envelope-date';date.textContent=readableDate(clue.date,{day:'numeric',month:'short'}).toUpperCase();
+  const final=index===clues.length-1,locked=final?!allSolved():day<clue.date;
+  const read=state.readClues.includes(clue.date),b=document.createElement('button');
+  b.className='envelope'+(locked?' locked':'')+(!locked&&read?' read':'');
+  b.setAttribute('aria-label',final?(locked?'Ultima busta: risolvi tutti gli enigmi':'Apri l’ultima busta'):(locked?'Busta sigillata: si apre il ':'Apri la busta del ')+readableDate(clue.date));
+  const date=document.createElement('span');date.className='envelope-date';date.textContent=final?'IL FINALE':readableDate(clue.date,{day:'numeric',month:'short'}).toUpperCase();
   const stamp=document.createElement('span');stamp.className='stamp';stamp.setAttribute('aria-hidden','true');stamp.textContent='✳';
-  const title=document.createElement('strong');title.textContent=locked?'Ancora sigillata':clue.title;
-  const status=document.createElement('small');status.textContent=locked?'SI APRE IL '+readableDate(clue.date).toUpperCase():read?'GIÀ APERTA · RILEGGI ↗':'È PER TE. APRILA ↗';
+  const title=document.createElement('strong');title.textContent=final?'L’ultima busta':locked?'Ancora sigillata':clue.title;
+  const status=document.createElement('small');status.textContent=final?(locked?state.secrets.length+'/8 SEGRETI RISOLTI':read?'IL FINALE · RILEGGI ↗':'HAI VINTO. APRILA ↗'):locked?'SI APRE IL '+readableDate(clue.date).toUpperCase():read?'GIÀ APERTA · RILEGGI ↗':'È PER TE. APRILA ↗';
   b.append(date,stamp,icon(locked?'lock':'key'),title,status);
   b.onclick=()=>{
+   if(final&&!allSolved()){
+    showModal('Il finale va conquistato.','Risolvi tutti gli otto enigmi del dossier per scoprire il titolo del film.','Segreti ritrovati: '+state.secrets.length+'/8.','L’ULTIMA BUSTA');return;
+   }
    if(locked){showModal('Non ancora.',`Questa busta si apre il ${readableDate(clue.date)}, a mezzanotte nel fuso ${config.timeZone}.`,'Nel frattempo, la casa ha altri segreti.','SIGILLO INTEGRO');return;}
    if(!state.readClues.includes(clue.date)){state.readClues.push(clue.date);save();renderEnvelopes();}
+   if(final){showModal(FINAL_FILM_TITLE,'Hai risolto tutti gli enigmi. Hai aperto tutte le porte. Ora sai quale film ti aspetta.','Film horror, amici e una sorpresa schifosa. '+readableDate(config.eventDate)+', ore '+config.eventTime+' · '+config.location+'.','IL FILM DELLA NOTTE È…');soundNote(130,.5);return;}
    showModal(clue.title,clue.body,clue.note,'BUSTA '+String(index+1).padStart(2,'0')+' / '+readableDate(clue.date).toUpperCase());soundNote(130,.15);
   };host.append(b);
  });
- const next=clues.find(c=>c.date>day);$('daily-note').textContent=next?'PROSSIMA BUSTA: '+readableDate(next.date).toUpperCase()+' · A MEZZANOTTE, ORA ITALIANA.':'TUTTE LE BUSTE SONO APERTE. ORA RESTA SOLO DA PRESENTARSI.';
+ const next=clues.slice(0,-1).find(c=>c.date>day);
+ $('daily-note').textContent=(next?'PROSSIMA BUSTA: '+readableDate(next.date).toUpperCase()+' · A MEZZANOTTE, ORA ITALIANA. ':'')+(allSolved()?'OTTO SEGRETI RISOLTI. APRI L’ULTIMA BUSTA.':'L’ULTIMA BUSTA SI APRE DOPO TUTTI GLI OTTO ENIGMI.');
 }
 let radioWonToday=false;
 function visit(){
@@ -105,11 +119,75 @@ let pumpkinCount=0;
 $('pumpkin').onclick=()=>{$('house-scene').classList.toggle('pumpkin-lit');toast(['La zucca sorride. Tu un po’ meno.','Non è lei la sorpresa schifosa.','Questa almeno non chiede di essere invitata.'][pumpkinCount++%3]);soundNote(220,.09);};
 let moonCount=0;
 $('moon-button').onclick=()=>toast(['La luna consiglia di non fare programmi per il dopo film.','Alle 21:21 anche le ombre arrivano puntuali.','La luna ha letto il programma. Ha chiesto di uscire.'][moonCount++%3]);
-$('candle').onclick=()=>{const out=$('candle').classList.toggle('out');if(out){unlock('candle');toast('Luce spenta. Adesso siamo pronti.');}else toast('Meglio controllare chi c’è nella stanza.');};
+// Seleziona esplicitamente il pulsante: mai il simbolo dell'icona.
+const candleButton=document.querySelector('button.candle-button');
+if(candleButton){
+ candleButton.type='button';
+ candleButton.setAttribute('aria-pressed','false');
+ // Un secondo comando visibile offre un bersaglio ampio anche su telefono.
+ const candleAction=document.createElement('button');
+ candleAction.type='button';candleAction.id='candle-action';
+ candleAction.className='text-link';candleAction.textContent='Spegni la candela';
+ candleAction.style.cssText='display:block;margin:0 auto 24px;min-height:44px;min-width:160px;padding:12px 20px;position:relative;touch-action:manipulation';
+ candleAction.setAttribute('aria-controls',candleButton.id);
+ candleAction.setAttribute('aria-pressed','false');
+ candleButton.insertAdjacentElement('afterend',candleAction);
+ function toggleCandle(){
+  const out=candleButton.classList.toggle('out');
+  candleButton.setAttribute('aria-pressed',String(out));
+  candleAction.setAttribute('aria-pressed',String(out));
+  candleButton.setAttribute('aria-label',out?'Riaccendi la candela':'Spegni la candela');
+  candleAction.textContent=out?'Riaccendi la candela':'Spegni la candela';
+  if(out){unlock('candle');toast('Luce spenta. Adesso siamo pronti.');}
+  else toast('Meglio controllare chi c’è nella stanza.');
+ }
+ candleButton.addEventListener('click',toggleCandle);
+ candleAction.addEventListener('click',toggleCandle);
+}
 let typed='';
 document.addEventListener('keydown',e=>{if(e.ctrlKey||e.metaKey||e.altKey||/INPUT|TEXTAREA|SELECT/.test(e.target.tagName)||e.target.isContentEditable)return;if(e.key.length===1){typed=(typed+e.key.toLowerCase()).slice(-6);if(typed==='incubo'){unlock('word');showModal('Hai detto la parola.',secretDefs[6].body);typed='';}}});
 // Audio attivato soltanto su richiesta, mai all'apertura.
 let audioContext=null,audioBus=null,audioOn=false,noiseGain=null;
+let screamBuffer=null,screamPromise=null,scarePending=false,screamSource=null;
+const radioAudioButton=document.createElement('button');
+radioAudioButton.type='button';radioAudioButton.id='radio-audio';radioAudioButton.className='text-link';
+radioAudioButton.textContent='Accendi la radio';radioAudioButton.style.cssText='margin-top:12px;min-height:44px';
+radioAudioButton.setAttribute('aria-pressed','false');
+document.querySelector('.radio-card > p').insertAdjacentElement('afterend',radioAudioButton);
+radioAudioButton.onclick=enableAudio;
+function loadScream(){
+ if(screamBuffer)return Promise.resolve(screamBuffer);
+ if(!screamPromise)screamPromise=fetch(new URL('assets/radio-scream.wav',document.baseURI)).then(r=>{if(!r.ok)throw Error('Audio non disponibile');return r.arrayBuffer();}).then(bytes=>audioContext.decodeAudioData(bytes)).then(buffer=>(screamBuffer=buffer)).catch(error=>{screamPromise=null;throw error;});
+ return screamPromise;
+}
+const scareStyle=document.createElement('style');
+scareStyle.textContent=`.radio-scare{position:fixed;inset:0;z-index:150;display:grid;place-content:center;background:#060b09;color:#e9e3cf;text-align:center;pointer-events:none;opacity:0;visibility:hidden}.radio-scare.on{visibility:visible;opacity:1;animation:radio-scare-in .18s ease-out}.radio-scare svg{width:min(76vw,510px);height:min(65vh,510px);filter:drop-shadow(0 0 45px #d9cba42b)}.radio-scare p{font:italic clamp(26px,6vw,65px) Georgia,serif;letter-spacing:-1px;margin:-25px 20px 0}@keyframes radio-scare-in{from{transform:scale(1.08)}to{transform:scale(1)}}@media(prefers-reduced-motion:reduce){.radio-scare.on{animation:none}}`;
+document.head.append(scareStyle);
+const scareOverlay=document.createElement('div');scareOverlay.className='radio-scare';scareOverlay.id='radio-scare';scareOverlay.setAttribute('aria-hidden','true');
+scareOverlay.innerHTML='<svg viewBox="0 0 400 440" xmlns="http://www.w3.org/2000/svg"><path d="M48 420Q38 280 92 150Q130 40 200 35Q278 47 311 156Q367 289 351 420Z" fill="#18221b" stroke="#49513d" stroke-width="2"/><path d="M115 188Q119 91 200 81Q281 92 288 187L267 321Q229 386 201 401Q170 379 134 323Z" fill="#d0cbb5"/><path d="M131 188Q155 154 181 188L174 237Q144 250 132 222ZM220 188Q247 156 273 189L270 223Q256 252 227 237Z" fill="#090e0b"/><ellipse cx="202" cy="302" rx="29" ry="60" fill="#0a100c"/><path d="m196 231-13 30 28 1" fill="none" stroke="#7c8270" stroke-width="4"/></svg><p>TI HO SENTITO.</p>';
+document.body.append(scareOverlay);
+function fallbackScream(){
+ const osc=audioContext.createOscillator(),gain=audioContext.createGain(),now=audioContext.currentTime;
+ osc.type='sawtooth';osc.frequency.setValueAtTime(680,now);osc.frequency.exponentialRampToValueAtTime(210,now+.85);
+ gain.gain.setValueAtTime(0,now);gain.gain.linearRampToValueAtTime(.08,now+.025);gain.gain.exponentialRampToValueAtTime(.001,now+.9);
+ osc.connect(gain).connect(audioContext.destination);osc.start(now);osc.stop(now+.95);osc.onended=()=>{osc.disconnect();gain.disconnect();};
+}
+async function triggerRadioScare(){
+ if(!audioOn||scarePending||state.radioScareDays.includes(day))return;
+ scarePending=true;
+ try{
+  let buffer=null;try{buffer=await loadScream();}catch{}
+  if(!audioOn||document.hidden||audioContext.state!=='running')return;
+  state.radioScareDays=[...state.radioScareDays.slice(-30),day];save();
+  if(buffer){
+   const source=audioContext.createBufferSource(),gain=audioContext.createGain(),compressor=audioContext.createDynamicsCompressor();
+   source.buffer=buffer;gain.gain.value=.55;compressor.threshold.value=-12;compressor.ratio.value=6;
+   source.connect(gain).connect(compressor).connect(audioContext.destination);screamSource=source;source.start();
+   source.onended=()=>{source.disconnect();gain.disconnect();compressor.disconnect();if(screamSource===source)screamSource=null;};
+  }else fallbackScream();
+  scareOverlay.classList.add('on');setTimeout(()=>scareOverlay.classList.remove('on'),1100);
+ }finally{scarePending=false;}
+}
 async function enableAudio(){
  const Audio=window.AudioContext||window.webkitAudioContext;if(!Audio){toast('Audio non disponibile in questo browser. La casa resta inquietante anche in silenzio.');return;}
  try{
@@ -118,8 +196,10 @@ async function enableAudio(){
    const buffer=audioContext.createBuffer(1,audioContext.sampleRate*3,audioContext.sampleRate),data=buffer.getChannelData(0);for(let i=0;i<data.length;i++)data[i]=Math.random()*2-1;
    const source=audioContext.createBufferSource();source.buffer=buffer;source.loop=true;const filter=audioContext.createBiquadFilter();filter.type='lowpass';filter.frequency.value=800;noiseGain=audioContext.createGain();noiseGain.gain.value=.2;source.connect(filter).connect(noiseGain).connect(audioBus);source.start();
   }
-  if(audioOn){audioOn=false;await audioContext.suspend();}else{await audioContext.resume();audioOn=true;soundNote(146,.7);}
+  if(audioOn){audioOn=false;if(screamSource){try{screamSource.stop();}catch{}screamSource=null;}scareOverlay.classList.remove('on');await audioContext.suspend();}else{await audioContext.resume();audioOn=true;soundNote(146,.7);loadScream().catch(()=>{});}
   $('sound-toggle').setAttribute('aria-pressed',String(audioOn));$('sound-toggle').querySelector('span').textContent=audioOn?'Audio on':'Audio off';
+  radioAudioButton.textContent=audioOn?'Spegni la radio':'Accendi la radio';radioAudioButton.setAttribute('aria-pressed',String(audioOn));
+  if(audioOn)tuneRadio(true);
  }catch{toast('Il browser non ha attivato l’audio. Puoi riprovare.');}
 }
 function soundNote(hz,duration=.2){if(!audioOn||!audioContext||audioContext.state!=='running')return;const osc=audioContext.createOscillator(),gain=audioContext.createGain(),now=audioContext.currentTime;osc.type='sine';osc.frequency.setValueAtTime(hz,now);osc.frequency.exponentialRampToValueAtTime(hz*.8,now+duration);gain.gain.setValueAtTime(0,now);gain.gain.linearRampToValueAtTime(.3,now+.015);gain.gain.exponentialRampToValueAtTime(.001,now+duration);osc.connect(gain).connect(audioBus);osc.start(now);osc.stop(now+duration+.02);osc.onended=()=>{osc.disconnect();gain.disconnect();};}
@@ -129,7 +209,7 @@ function tuneRadio(user=true){
  $('frequency').textContent=f.toFixed(1);$('tuner').setAttribute('aria-valuetext',f.toFixed(1)+' MHz. '+(found?'Segnale trovato':distance<.6?'Segnale molto vicino':distance<2?'Segnale vicino':'Interferenze'));
  $('radio-light').classList.toggle('tuned',found);
  if(noiseGain&&audioContext)noiseGain.gain.setTargetAtTime(found?.035:Math.min(.35,.08+distance*.025),audioContext.currentTime,.1);
- if(found){const n=Number(day.replace(/-/g,''))%4;$('radio-message').textContent=config.transmissions[n];if(user&&!radioWonToday){radioWonToday=true;unlock('radio');soundNote(329,.6);toast('Trasmissione di oggi agganciata. Torna domani per una nuova frequenza.');}}
+ if(found){const n=Number(day.replace(/-/g,''))%4;$('radio-message').textContent=config.transmissions[n];if(user&&!radioWonToday){radioWonToday=true;unlock('radio');soundNote(329,.6);toast(allSolved()?'Otto enigmi risolti. Apri l’ultima busta.':'Trasmissione di oggi agganciata. Torna domani per una nuova frequenza.');}if(user&&audioOn)triggerRadioScare();}
  else $('radio-message').textContent=distance<.6?'Il segnale è quasi pulito. Muoviti piano.':distance<2?'Una voce tra le interferenze… sei vicino.':distance<5?'Qualcosa si muove nel rumore.':'Solo interferenze. Per ora.';
 }
 $('tuner').addEventListener('input',()=>tuneRadio());
@@ -199,6 +279,6 @@ $('progress-reset').onclick=()=>{
  showModal('Cancellare le tue tracce?','Si azzerano segreti, buste lette, record, nome sul biglietto e giorni di visita su questo dispositivo. I contenuti dell’evento restano come sono.');
  const b=document.createElement('button');b.className='btn primary';b.textContent='Sì, azzera i miei progressi';b.onclick=()=>{try{localStorage.removeItem(progressKey);}catch{}location.reload();};$('modal-content').append(b);
 };
-document.addEventListener('visibilitychange',()=>{if(document.hidden){stopHold();if(audioContext&&audioOn)audioContext.suspend().catch(()=>{});}else{tick();if(audioContext&&audioOn)audioContext.resume().catch(()=>{});}});
+document.addEventListener('visibilitychange',()=>{if(document.hidden){stopHold();if(screamSource){try{screamSource.stop();}catch{}screamSource=null;}scareOverlay.classList.remove('on');if(audioContext&&audioOn)audioContext.suspend().catch(()=>{});}else{tick();if(audioContext&&audioOn)audioContext.resume().catch(()=>{});}});
 applyConfig();renderSecrets();showBest();newMemory();tick();setInterval(tick,1000);
 })();
