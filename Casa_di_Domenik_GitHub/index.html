@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#101814"><meta name="description" content="31 ottobre, ore 21:21. Casa di Domenik. Un film horror, una sorpresa schifosa e una casa piena di segreti. Torna ogni giorno.">
+<title>Casa di Domenik — L’ultima proiezione</title>
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml"><link rel="stylesheet" href="style.css">
+<script src="config.js" defer></script><script src="core.js" defer></script><script src="app.js" defer></script>
+</head>
+<body>
+<svg class="sprite" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><defs>
+<symbol id="eye" viewBox="0 0 24 24"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></symbol>
+<symbol id="arrow" viewBox="0 0 24 24"><path d="M4 12h15m-6-6 6 6-6 6"/></symbol>
+<symbol id="sound" viewBox="0 0 24 24"><path d="M4 9h4l5-4v14l-5-4H4Zm13-2q6 5 0 10m-1-7q2 2 0 4"/></symbol>
+<symbol id="moon" viewBox="0 0 24 24"><path d="M20 15A9 9 0 0 1 9 4 9 9 0 1 0 20 15Z"/></symbol>
+<symbol id="key" viewBox="0 0 24 24"><circle cx="8" cy="8" r="5"/><path d="m12 12 9 9m-6-6 3-3m0 6 3-3"/></symbol>
+<symbol id="lock" viewBox="0 0 24 24"><rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3m-4 4v3"/></symbol>
+<symbol id="spark" viewBox="0 0 24 24"><path d="m12 2 2.4 7.6L22 12l-7.6 2.4L12 22l-2.4-7.6L2 12l7.6-2.4Z"/></symbol>
+<symbol id="ticket" viewBox="0 0 24 24"><path d="M3 5h18v5a2 2 0 0 0 0 4v5H3v-5a2 2 0 0 0 0-4Z"/><path d="M15 5v3m0 2v4m0 2v3"/></symbol>
+<symbol id="candle" viewBox="0 0 24 24"><path d="M9 10h6v10H9Zm-3 10h12M12 9c-6-1-2-6 0-7 2 3 5 6 0 7Z"/></symbol>
+</defs></svg>
+<a class="skip" href="#main">Salta al contenuto</a>
+<div id="local-banner" class="local-banner" hidden>Stai vedendo le tue modifiche locali. <a href="studio.html">Apri lo studio</a><button id="public-version">Mostra versione pubblicata</button></div>
+<header class="header wrap">
+ <a class="brand" href="#" id="brand"><svg class="icon brand-eye"><use href="#eye"/></svg><span>CASA DI<br><strong>DOMENIK</strong></span></a>
+ <nav aria-label="Navigazione principale"><a href="#rituale">Il rituale</a><a href="#indizi">Gli indizi <span class="nav-dot"></span></a><a href="#archivio">I tuoi segreti <span id="nav-secret-count">0/8</span></a></nav>
+ <button class="sound-toggle" id="sound-toggle" aria-pressed="false"><svg class="icon"><use href="#sound"/></svg><span>Audio off</span></button>
+</header>
+<main id="main">
+<section class="hero wrap" aria-labelledby="hero-title">
+ <div class="hero-copy">
+  <div class="eyebrow"><span class="live-dot"></span> UNA NOTTE. DUE FINALI.</div>
+  <h1 id="hero-title"><span>Il film finisce.</span><em>Il peggio no.</em></h1>
+  <p class="hero-intro" id="intro">Un film horror. Gli amici giusti. E una sorpresa schifosa che sarebbe meglio non immaginare.</p>
+  <div class="event-line"><span id="event-date">31 OTTOBRE</span><b>·</b><span id="event-time">ORE 21:21</span><b>·</b><span id="event-location">CASA DI DOMENIK</span></div>
+  <p class="count-label" id="count-label">ALL’INIZIO DELL’INCUBO MANCANO</p>
+  <div class="countdown" role="timer" aria-label="Tempo rimanente" aria-live="off">
+   <div><strong id="days">00</strong><span>GIORNI</span></div><i>:</i><div><strong id="hours">00</strong><span>ORE</span></div><i>:</i><div><strong id="minutes">00</strong><span>MINUTI</span></div><i>:</i><div><strong id="seconds">00</strong><span>SECONDI</span></div>
+  </div>
+  <div class="hero-actions"><button class="btn primary" id="ticket-open"><svg class="icon"><use href="#ticket"/></svg>Il tuo biglietto per l’incubo <svg class="icon"><use href="#arrow"/></svg></button><button class="text-link" id="calendar">Salva la data ↗</button></div>
+  <p class="quiet-note">Nessun dress code. Qualche pessima intenzione.</p>
+ </div>
+ <div class="house-scene" id="house-scene">
+  <img src="assets/house.svg" width="850" height="900" alt="Una casa misteriosa sotto la luna, con finestre illuminate, zucche e una porta socchiusa. Esplora i punti interattivi." fetchpriority="high">
+  <div class="fog fog-one"></div><div class="fog fog-two"></div>
+  <span class="ghost" id="ghost" aria-hidden="true">◉</span>
+  <button class="hotspot door" id="door" aria-label="Bussa alla porta della casa"><span>Bussa piano.</span></button>
+  <button class="hotspot window" id="window" aria-label="Guarda la finestra illuminata"><span>C’è qualcuno?</span></button>
+  <button class="hotspot pumpkin" id="pumpkin" aria-label="Tocca la zucca"><span>Una pessima idea.</span></button>
+  <button class="hotspot moon" id="moon-button" aria-label="Interroga la luna"><span>Anche lei sa.</span></button>
+  <div class="scene-note"><span class="crosshair">+</span> LA CASA NON È SOLO UNO SFONDO.</div>
+ </div>
+ <a class="scroll-cue" href="#rituale">SCENDI. SE TE LA SENTI. <span>↓</span></a>
+</section>
+<div class="marquee" aria-hidden="true"><div>31 OTTOBRE <span>✳</span> ORE 21:21 <span>✳</span> CASA DI DOMENIK <span>✳</span> IL PEGGIO DEVE ANCORA VENIRE <span>✳</span> 31 OTTOBRE <span>✳</span> ORE 21:21 <span>✳</span> CASA DI DOMENIK <span>✳</span></div></div>
+<section class="ritual-section wrap" id="rituale" aria-labelledby="ritual-title">
+ <div class="section-heading"><div><div class="eyebrow">01 / IL PROGRAMMA</div><h2 id="ritual-title">Non è la solita<br><em>serata sul divano.</em></h2></div><p id="extra">Porta il coraggio.<br>Lo stomaco vediamo.</p></div>
+ <div class="program">
+  <article><span class="program-no">I</span><div><span class="tag">ALLE <span id="program-time">21:21</span> · CI SI VEDE DENTRO</span><h3>La convocazione</h3><p>Il posto è <span id="program-location">Casa di Domenik</span>. Il ritardo è un ottimo modo per fare un ingresso sospetto.</p></div><svg class="icon"><use href="#key"/></svg></article>
+  <article><span class="program-no">II</span><div><span class="tag">PRIMA · LUCI SPENTE</span><h3>La proiezione</h3><p>Film horror. Commenti sottovoce. Qualcuno che dice «non fa paura» e poi non va in bagno da solo.</p><span class="film-tag" id="film-title">Il titolo resta nell’ombra.</span><button class="text-link teaser-link" id="teaser">Guarda il teaser di 10 secondi ↗</button></div><svg class="icon"><use href="#eye"/></svg></article>
+  <article><span class="program-no">III</span><div><span class="tag">DOPO · NESSUNA ANTICIPAZIONE</span><h3>La sorpresa <em>schifosa.</em></h3><p>Ti diremmo di più, ma rovinerebbe tutto. Soprattutto la tua tranquillità.</p></div><svg class="icon"><use href="#spark"/></svg></article>
+ </div>
+</section>
+<section class="clue-section" id="indizi" aria-labelledby="clue-title"><div class="wrap">
+ <div class="section-heading"><div><div class="eyebrow">02 / TORNA DOMANI. SE OSI.</div><h2 id="clue-title">Ogni giorno,<br><em>un brutto presentimento.</em></h2></div><p>Quattro buste. Nessuno spoiler.<br>Si aprono un giorno alla volta,<br>secondo l’ora italiana.</p></div>
+ <div class="envelopes" id="envelopes"></div>
+ <p class="small-note" id="daily-note"></p>
+</div></section>
+<section class="play-section wrap" id="prove" aria-labelledby="play-title">
+ <div class="section-heading"><div><div class="eyebrow">03 / NELL’ATTESA, PERDI LA CALMA.</div><h2 id="play-title">Metti alla prova<br><em>i tuoi nervi.</em></h2></div><p>La casa si ricorda di te.<br>I tuoi progressi restano<br>su questo dispositivo.</p></div>
+ <div class="play-grid">
+  <article class="radio-card"><div class="tag">01 — RADIO DALL’ALDILÀ</div><h3>C’è qualcuno<br>su questa frequenza?</h3><p>Il segnale cambia ogni giorno.<br>Gira la manopola. Ascolta il silenzio.</p><div class="radio-machine"><div class="radio-top"><span>DOMENIK FM</span><span id="radio-light" class="radio-led"></span></div><div class="radio-screen"><span id="frequency">98.0</span><small>MHz</small><div class="waveform" aria-hidden="true">▂ ▅ ▃ ▆ ▂ ▄ ▇ ▃ ▂ ▆ ▄ ▂</div></div><label class="sr-only" for="tuner">Frequenza radio, da 88 a 108 MHz</label><input id="tuner" type="range" min="88" max="108" step="0.1" value="98"><div class="radio-scale"><span>88</span><span>92</span><span>96</span><span>100</span><span>104</span><span>108</span></div></div><div class="radio-message" id="radio-message" role="status">Solo interferenze. Per ora.</div></article>
+  <article class="nerve-card"><div class="tag">02 — SANGUE FREDDO</div><h3>Non mollare.<br>Per cinque secondi.</h3><p>Tieni premuto il simbolo. Sembra facile.<br>Anche entrare qui lo sembrava.</p><button class="hold-button" id="hold-button" aria-label="Tieni premuto per cinque secondi. Con la tastiera tieni premuto Spazio o Invio."><svg class="icon"><use href="#eye"/></svg><span id="hold-number">00.0</span></button><p class="hold-status" id="hold-status" role="status">TIENI PREMUTO PER INIZIARE</p><button class="text-link small" id="hold-accessible">Alternativa: avvia una prova a 5 tocchi</button><p class="best" id="hold-best">Il coraggio va allenato.</p></article>
+  <article class="memory-card"><div class="memory-intro"><div><div class="tag">03 — MEMORIA DEL BUIO</div><h3>Ci siamo già visti?</h3><p>Quattro coppie. Ricordale prima che la casa ricordi te.</p></div><div class="memory-meta"><span id="memory-moves">0 tentativi</span><button class="text-link small" id="memory-reset">Ricomincia ↻</button></div></div><div class="memory-grid" id="memory-grid"></div><p class="memory-status" id="memory-status" role="status">Trova le coppie. Nessuna fretta. Forse.</p></article>
+ </div>
+</section>
+<section class="archive-section wrap" id="archivio" aria-labelledby="archive-title"><div class="archive-intro"><div class="eyebrow">04 / IL TUO DOSSIER</div><h2 id="archive-title">La curiosità<br><em>lascia tracce.</em></h2><p>Qualcosa è nascosto in piena vista.<br>Qualcos’altro aspetta un gesto preciso.</p><div class="secret-total"><strong id="secret-total">0</strong><span>/ 8 SEGRETI<br>RITROVATI</span></div><p class="small-note" id="visit-streak"></p></div><div class="secret-list" id="secret-list"></div></section>
+<section class="closing"><div class="wrap"><button id="candle" class="candle-button" aria-label="Spegni o accendi la candela"><span class="flame"></span><span class="wax"></span></button><div class="eyebrow" id="closing-meta">31 OTTOBRE / ORE 21:21 / CASA DI DOMENIK</div><h2>Il posto c’è.<br><em>Il coraggio?</em></h2><button class="btn primary" id="share">Convoca un amico <svg class="icon"><use href="#arrow"/></svg></button><p>Film horror. Sorpresa schifosa. Ottima compagnia.</p></div></section>
+</main>
+<footer class="footer wrap"><span>UNA SERATA TRA AMICI. UN PESSIMO PRESENTIMENTO.</span><a href="studio.html">Lo studio di Domenik ↗</a><button id="progress-reset" class="footer-reset">Azzera le mie tracce</button></footer>
+<dialog id="modal" class="modal"><button class="modal-close" id="modal-close" aria-label="Chiudi finestra">×</button><div id="modal-content"></div></dialog>
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
+<noscript><p class="noscript">Questa casa prende vita con JavaScript. L’appuntamento resta: 31 ottobre 2026, ore 21:21, Casa di Domenik.</p></noscript>
+</body></html>
